@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PI_AGENT_HOME="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+GENTLE_PI_HOME="$HOME/.pi/gentle-ai"
+RUN_GENTLE_SYNC=1
+
+if [[ "${1:-}" == "--no-gentle-sync" ]]; then
+  RUN_GENTLE_SYNC=0
+fi
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "missing command: $1" >&2
+    exit 1
+  fi
+}
+
+backup_if_exists() {
+  local file="$1"
+  if [[ -f "$file" ]]; then
+    local stamp
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$GENTLE_PI_HOME/backups"
+    cp "$file" "$GENTLE_PI_HOME/backups/$(basename "$file").$stamp.bak"
+    echo "backup: $file"
+  fi
+}
+
+install_file() {
+  local source="$1"
+  local target="$2"
+  mkdir -p "$(dirname "$target")"
+  backup_if_exists "$target"
+  cp "$source" "$target"
+  echo "installed: $target"
+}
+
+require_command node
+require_command pi
+require_command gentle-ai
+
+"$ROOT/scripts/verify-pi-gentle"
+
+if [[ "$RUN_GENTLE_SYNC" == "1" ]]; then
+  gentle-ai sync --agent pi
+else
+  echo "skipped: gentle-ai sync --agent pi"
+fi
+
+install_file "$ROOT/profiles/profiles.json" "$GENTLE_PI_HOME/profiles.json"
+install_file "$ROOT/profiles/models.json" "$GENTLE_PI_HOME/models.json"
+install_file "$ROOT/profiles/subagents.json" "$PI_AGENT_HOME/subagents.json"
+install_file "$ROOT/profiles/agents/kairos.md" "$PI_AGENT_HOME/agents/kairos.md"
+
+"$ROOT/scripts/verify-pi-gentle"
+
+echo "ok: synced Gentle Pi overlays"

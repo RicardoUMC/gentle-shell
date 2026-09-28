@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PI_AGENT_HOME="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+GENTLE_PI_HOME="$HOME/.pi/gentle-ai"
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "missing command: $1" >&2
+    exit 1
+  fi
+}
+
+json_check() {
+  local file="$1"
+  node -e 'const fs=require("fs"); JSON.parse(fs.readFileSync(process.argv[1], "utf8"));' "$file" \
+    || { echo "invalid JSON: $file" >&2; exit 1; }
+  echo "ok JSON: $file"
+}
+
+require_command node
+require_command pi
+require_command gentle-ai
+
+json_check "$ROOT/profiles/profiles.json"
+json_check "$ROOT/profiles/models.json"
+json_check "$ROOT/profiles/subagents.json"
+
+if [[ ! -f "$ROOT/profiles/agents/kairos.md" ]]; then
+  echo "missing Kairos agent: $ROOT/profiles/agents/kairos.md" >&2
+  exit 1
+fi
+
+if ! grep -q '^name: kairos$' "$ROOT/profiles/agents/kairos.md"; then
+  echo "invalid Kairos agent frontmatter: missing 'name: kairos'" >&2
+  exit 1
+fi
+
+echo "ok agent: $ROOT/profiles/agents/kairos.md"
+
+node "$ROOT/scripts/verify-models.mjs" "$ROOT" "$PI_AGENT_HOME"
+
+echo "ok: Gentle Pi overlays are valid"

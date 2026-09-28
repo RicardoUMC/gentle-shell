@@ -1,0 +1,34 @@
+{
+  "model_profiles": {
+    "sdd-apply": {
+      "model": "openai-codex/gpt-5.3-codex-spark"
+    },
+    "sdd-archive": {
+      "model": "opencode/nemotron-3-ultra-free"
+    },
+    "sdd-design": {
+      "model": "opencode-go/glm-5.2"
+    },
+    "sdd-explore": {
+      "model": "opencode-go/glm-5.2"
+    },
+    "sdd-init": {
+      "model": "opencode-go/deepseek-v4-flash"
+    },
+    "sdd-onboard": {
+      "model": "openai-codex/gpt-5.5"
+    },
+    "sdd-proposal": {
+      "model": "opencode/nemotron-3-ultra-free"
+    },
+    "sdd-spec": {
+      "model": "openai-codex/gpt-5.5"
+    },
+    "sdd-tasks": {
+      "model": "opencode-go/deepseek-v4-pro"
+    },
+    "sdd-verify": {
+      "model": "openai-codex/gpt-5.5"
+    }
+  }
+}

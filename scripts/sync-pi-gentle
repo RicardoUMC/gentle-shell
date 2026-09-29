@@ -50,9 +50,9 @@ else
 fi
 
 install_file "$ROOT/profiles/profiles.json" "$GENTLE_PI_HOME/profiles.json"
-install_file "$ROOT/profiles/models.json" "$GENTLE_PI_HOME/models.json"
-install_file "$ROOT/profiles/subagents.json" "$PI_AGENT_HOME/subagents.json"
 install_file "$ROOT/profiles/agents/kairos.md" "$PI_AGENT_HOME/agents/kairos.md"
+
+node "$ROOT/scripts/apply-active-profile.mjs"
 
 "$ROOT/scripts/verify-pi-gentle"
 

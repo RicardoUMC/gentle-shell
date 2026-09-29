@@ -24,8 +24,19 @@ require_command pi
 require_command gentle-ai
 
 json_check "$ROOT/profiles/profiles.json"
-json_check "$ROOT/profiles/models.json"
-json_check "$ROOT/profiles/subagents.json"
+
+if ! node -e '
+const fs=require("fs");
+const doc=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+if (typeof doc.active!=="string") { console.error("profiles.json: missing active"); process.exit(1); }
+if (!doc.profiles || !Object.prototype.hasOwnProperty.call(doc.profiles, doc.active)) {
+  console.error(`profiles.json: active "${doc.active}" not found`);
+  process.exit(1);
+}
+console.log(`ok active: ${doc.active}`);
+' "$ROOT/profiles/profiles.json"; then
+  exit 1
+fi
 
 if [[ ! -f "$ROOT/profiles/agents/kairos.md" ]]; then
   echo "missing Kairos agent: $ROOT/profiles/agents/kairos.md" >&2

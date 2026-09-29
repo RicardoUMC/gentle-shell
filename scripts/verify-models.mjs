@@ -15,14 +15,26 @@ if (!fs.existsSync(storePath)) {
 }
 
 const store = JSON.parse(fs.readFileSync(storePath, "utf8"));
-const files = [
-  path.join(root, "profiles", "profiles.json"),
-  path.join(root, "profiles", "models.json"),
-  path.join(root, "profiles", "subagents.json"),
-];
+const profilesPath = path.join(root, "profiles", "profiles.json");
+if (!fs.existsSync(profilesPath)) {
+  console.error(`missing profiles.json: ${profilesPath}`);
+  process.exit(1);
+}
+const doc = JSON.parse(fs.readFileSync(profilesPath, "utf8"));
+
+if (typeof doc.active !== "string" || !doc.profiles || !doc.profiles[doc.active]) {
+  console.error(`profiles.json has no valid active profile`);
+  process.exit(1);
+}
+
+const profileNames = Object.keys(doc.profiles).sort();
+if (!profileNames.length) {
+  console.error("profiles.json has no profiles");
+  process.exit(1);
+}
+console.log(`verifying ${profileNames.length} profiles (active: ${doc.active})`);
 
 const models = new Set();
-
 function visit(value) {
   if (Array.isArray(value)) {
     for (const item of value) visit(item);
@@ -33,7 +45,7 @@ function visit(value) {
   for (const item of Object.values(value)) visit(item);
 }
 
-for (const file of files) visit(JSON.parse(fs.readFileSync(file, "utf8")));
+for (const name of profileNames) visit(doc.profiles[name]);
 
 let failed = false;
 for (const model of [...models].sort()) {

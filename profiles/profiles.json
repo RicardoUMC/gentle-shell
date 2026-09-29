@@ -38,6 +38,56 @@
         "model": "openai-codex/gpt-5.5"
       }
     },
-    "current": {}
+    "sdd-opencode-go": {
+      "orchestrator": {
+        "model": "opencode-go/qwen3.8-flash",
+        "thinking": "medium"
+      },
+      "sdd-init": {
+        "model": "opencode-go/deepseek-v4-flash"
+      },
+      "sdd-onboard": {
+        "model": "opencode-go/qwen3.7-plus"
+      },
+      "sdd-explore": {
+        "model": "opencode-go/glm-5.3",
+        "thinking": "high"
+      },
+      "sdd-research": {
+        "model": "opencode-go/kimi-k3",
+        "thinking": "high"
+      },
+      "sdd-proposal": {
+        "model": "opencode-go/glm-5.3",
+        "thinking": "high"
+      },
+      "sdd-spec": {
+        "model": "opencode-go/kimi-k3",
+        "thinking": "high"
+      },
+      "sdd-design": {
+        "model": "opencode-go/glm-5.3",
+        "thinking": "high"
+      },
+      "sdd-tasks": {
+        "model": "opencode-go/mimo-v2.6-pro"
+      },
+      "sdd-apply": {
+        "model": "opencode-go/kimi-k2.7-code"
+      },
+      "sdd-verify": {
+        "model": "opencode-go/glm-5.3-flash",
+        "thinking": "high"
+      },
+      "sdd-remediate": {
+        "model": "opencode-go/glm-5.3-flash"
+      },
+      "sdd-status": {
+        "model": "opencode-go/deepseek-v4-flash"
+      },
+      "sdd-archive": {
+        "model": "opencode-go/deepseek-v4-flash"
+      }
+    }
   }
 }

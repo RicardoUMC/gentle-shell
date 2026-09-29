@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Set the active profile in profiles/profiles.json.
+# Usage: set-active-profile <name> [--dry-run] [--no-apply]
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROFILES="$ROOT/profiles/profiles.json"
+
+if [[ $# -lt 1 ]]; then
+  echo "usage: set-active-profile <name> [--dry-run] [--no-apply]" >&2
+  exit 1
+fi
+
+NAME="$1"; shift || true
+DRY=0
+APPLY=1
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY=1 ;;
+    --no-apply) APPLY=0 ;;
+    *) echo "unknown flag: $arg" >&2; exit 1 ;;
+  esac
+done
+
+if [[ ! -f "$PROFILES" ]]; then
+  echo "missing profiles.json: $PROFILES" >&2
+  exit 1
+fi
+
+if ! node -e '
+const fs=require("fs");
+const doc=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+const name=process.argv[2];
+if(!doc.profiles||!Object.prototype.hasOwnProperty.call(doc.profiles,name)){
+  const known=Object.keys(doc.profiles||{}).sort().join(", ");
+  console.error(`unknown profile "${name}". known: ${known||"(none)"}`);
+  process.exit(1);
+}
+' "$PROFILES" "$NAME"; then
+  exit 1
+fi
+
+if [[ "$DRY" == "1" ]]; then
+  echo "would set active profile to: $NAME"
+  exit 0
+fi
+
+node -e '
+const fs=require("fs");
+const p=process.argv[1], name=process.argv[2];
+const doc=JSON.parse(fs.readFileSync(p,"utf8"));
+doc.active=name;
+fs.writeFileSync(p, JSON.stringify(doc, null, 2) + "\n");
+' "$PROFILES" "$NAME"
+
+echo "active profile set to: $NAME"
+
+if [[ "$APPLY" == "1" ]]; then
+  "$ROOT/scripts/apply-active-profile.mjs"
+fi

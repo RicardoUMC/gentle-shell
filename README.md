@@ -42,6 +42,8 @@ Two profiles live in `profiles/profiles.json`. Only one is `active` at a time.
 
 Mixed providers. OpenAI Codex for orchestration and heavy phases, plus `opencode-go` and `opencode` free tiers where useful.
 
+Its OpenAI routing uses `gpt-6.1-sol` for exploration, proposal, research, design, specification, verification, and review because Artificial Analysis currently places it at Intelligence Index 52 with a much better cost/performance balance than the top GPT-6 tier. `gpt-5.3-codex-spark` remains the implementation model because it is code-specialized. Cheap OpenCode Go models remain on bootstrap, status, archive, and mechanical task work.
+
 ### `sdd-opencode-go`
 
 Every entry uses only the `opencode-go` subscription. Model routing follows two signals:
@@ -64,11 +66,11 @@ Assignments follow that split:
 | `sdd-design` | `glm-5.3` | Architectural decisions; low per-change frequency. |
 | `sdd-spec` | `kimi-k3` | Long-form writing quality; 1M context for large specs. |
 | `sdd-research` | `kimi-k3` | Multi-source synthesis; AA Coding 76.2; few calls per change. |
-| `sdd-tasks` | `mimo-v2.6-pro` | Mechanical breakdown; AA Intelligence 46.3; high ceiling. |
-| `sdd-apply` | `kimi-k2.7-code` | Code-specialized, generous ~6,750 req/mo. |
+| `sdd-tasks` | `mimo-v2.6-pro` | Mechanical breakdown; AA Intelligence 46; low cost. |
+| `sdd-apply` | `deepseek-v4-pro` | Better benchmark/cost balance than Kimi K2.7 Code for implementation; high reasoning. |
 | `sdd-verify` | `glm-5.3-flash` | Rigorous review, faster + cheaper than `glm-5.3`. |
 | `sdd-remediate` | `glm-5.3-flash` | Bounded fixes; frequent enough to justify the flash tier. |
-| `sdd-onboard` | `qwen3.7-plus` | Guided walkthrough; AA Coding 66.0 at high ceiling. |
+| `sdd-onboard` | `mimo-v2.6-pro` | Guided walkthrough; stronger current Intelligence Index and low cost than Qwen3.7 Plus. |
 | `sdd-init` | `deepseek-v4-flash` | Bootstrap scaffolding; cheap and fast. |
 | `sdd-status` | `deepseek-v4-flash` | Read-only report. |
 | `sdd-archive` | `deepseek-v4-flash` | Closure write-up. |

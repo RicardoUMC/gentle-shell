@@ -14,10 +14,12 @@
         "model": "opencode/nemotron-3-ultra-free"
       },
       "sdd-design": {
-        "model": "opencode-go/glm-5.2"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "sdd-explore": {
-        "model": "opencode-go/glm-5.2"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "sdd-init": {
         "model": "opencode-go/deepseek-v4-flash"
@@ -26,22 +28,31 @@
         "model": "openai-codex/gpt-5.5"
       },
       "sdd-proposal": {
-        "model": "opencode/nemotron-3-ultra-free"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
+      },
+      "sdd-research": {
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "sdd-spec": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "sdd-tasks": {
         "model": "opencode-go/deepseek-v4-pro"
       },
       "sdd-verify": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "gentle-ai-explore": {
-        "model": "opencode-go/glm-5.2"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "gentle-ai-verify": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "gentle-ai-worker": {
         "model": "openai-codex/gpt-5.3-codex-spark"
@@ -50,25 +61,31 @@
         "model": "openai-codex/gpt-5.3-codex-spark"
       },
       "jd-judge-a": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "jd-judge-b": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "kairos": {
         "model": "openai-codex/gpt-5.5"
       },
       "review-readability": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "review-reliability": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "review-resilience": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       },
       "review-risk": {
-        "model": "openai-codex/gpt-5.5"
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high"
       }
     },
     "sdd-opencode-go": {
@@ -80,7 +97,7 @@
         "model": "opencode-go/deepseek-v4-flash"
       },
       "sdd-onboard": {
-        "model": "opencode-go/qwen3.7-plus"
+        "model": "opencode-go/mimo-v2.6-pro"
       },
       "sdd-explore": {
         "model": "opencode-go/glm-5.3",
@@ -106,7 +123,8 @@
         "model": "opencode-go/mimo-v2.6-pro"
       },
       "sdd-apply": {
-        "model": "opencode-go/kimi-k2.7-code"
+        "model": "opencode-go/deepseek-v4-pro",
+        "thinking": "high"
       },
       "sdd-verify": {
         "model": "opencode-go/glm-5.3-flash",
@@ -130,7 +148,8 @@
         "thinking": "high"
       },
       "gentle-ai-worker": {
-        "model": "opencode-go/kimi-k2.7-code"
+        "model": "opencode-go/deepseek-v4-pro",
+        "thinking": "high"
       },
       "jd-fix-agent": {
         "model": "opencode-go/glm-5.3-flash"

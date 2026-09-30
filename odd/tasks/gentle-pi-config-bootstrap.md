@@ -20,22 +20,26 @@ Create a small reproducible repository for Ricardo's Gentle Shell / Pi overlays.
 - [x] T5 — Generate and install the Pi `kairos` agent.
 - [x] T6 — Add `sdd-opencode-go` profile (opencode-go only) with benchmark-informed routing.
 - [x] T7 — Move `models.json` / `subagents.json` from static files to per-profile materialization.
+- [x] T8 — Align routing with Gentle Pi's official agent inventory and install official SDD assets.
 
 ## Checks
 
 - JSON files parse successfully.
 - Every profile in `profiles/profiles.json` resolves against `~/.pi/agent/models-store.json`.
+- Every profile key belongs to Gentle Pi's official inventory from `lib/sdd-preflight.ts` and `assets/agents/*.md`.
+- Official SDD agents are installed through `/gentle:install-sdd`.
 - `profiles/agents/kairos.md` exists and has `name: kairos` frontmatter.
 - `gentle-ai doctor` remains healthy.
 - `apply-active-profile.mjs --dry-run` reports no unexpected changes when the active profile matches the current Pi state.
 
 ## Evidence
 
-- `scripts/verify-pi-gentle` → 13 models across 2 profiles, all ok.
-- `scripts/sync-pi-gentle --no-gentle-sync` → active profile `sdd-opencode` unchanged; end-to-end materialization passes.
-- `scripts/apply-active-profile.mjs --dry-run` → `unchanged` on all four targets when `active` is `sdd-opencode`.
+- `scripts/verify-pi-gentle --strict-materialized` → 13 models across 2 profiles; official profile keys, runtime stores, and assets all pass.
+- `scripts/sync-pi-gentle --no-gentle-sync` → official names materialized end-to-end with active profile `sdd-opencode-go`.
+- `node scripts/apply-active-profile.mjs --print-roles` → direct official SDD, delegation, Judgment Day, review, and orchestrator keys.
+- `/gentle:install-sdd` → installed the official SDD agent assets and support files.
 - `gentle-ai doctor` → 9 passed, 0 failed, 0 warnings.
 
 ## Next step
 
-Let Ricardo decide when to switch to `sdd-opencode-go` (`scripts/set-active-profile sdd-opencode-go`) and whether to add a remote for this repository.
+Let Ricardo decide whether to switch back to `sdd-opencode` (`scripts/set-active-profile sdd-opencode`) and whether to add a remote for this repository.

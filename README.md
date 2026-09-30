@@ -6,44 +6,39 @@ This repository does **not** install Pi itself and does **not** own secrets, aut
 
 ## What this repo manages
 
-- `profiles/profiles.json` → translated by `apply-active-profile.mjs` and written to Pi runtime as:
-  - `~/.pi/gentle-ai/profiles.json` (translated profiles envelope, **Pi-native agent keys only**)
-  - `~/.pi/gentle-ai/models.json` (translated active profile, **Pi-native agent keys only**)
-  - `~/.pi/agent/subagents.json` (`model_profiles` keyed by **Pi agent name**, never by phase key)
+- `profiles/profiles.json` → materialized by `apply-active-profile.mjs` using Gentle Pi's official agent keys:
+  - `~/.pi/gentle-ai/profiles.json` (profiles envelope, **official Pi agent keys only**)
+  - `~/.pi/gentle-ai/models.json` (active profile, **official Pi agent keys only**)
+  - `~/.pi/agent/subagents.json` (`model_profiles` keyed by **Pi agent name**)
   - `~/.pi/agent/settings.json` (only the three `defaultProvider`/`defaultModel`/`defaultThinkingLevel` keys)
   - `~/.pi/agent/agents/<name>.md` frontmatter (`model:` / `thinking:`) for mapped agents that already exist
 - `profiles/agents/kairos.md` → copied to `~/.pi/agent/agents/kairos.md`
 
-## Role translation (phase key → Pi agent)
+## Official Gentle Pi agent names
 
-Profiles are written with OpenCode/SDD **phase** keys (`sdd-init`, `sdd-explore`, `sdd-apply`, ...). That is the schema OpenCode consumes and it is intentional. Pi has no agents with those names, so copying the keys verbatim into `subagents.json` matched nothing and every child silently inherited the orchestrator model. The same risk applies to `~/.pi/gentle-ai/profiles.json` and `~/.pi/gentle-ai/models.json`: Pi's `/gentle:profiles` reads those stores and applies whichever keys it finds to the installed agents. If those stores contained raw `sdd-*` phase keys, applying a profile through the UI would clear every real agent's routing.
+The authoritative table is shipped by the installed Gentle Pi 3.7.0 package:
 
-`apply-active-profile.mjs` therefore translates every source profile into Pi-native runtime profiles before writing anything to `~/.pi`. Phase keys stay in the repo-side `profiles/profiles.json`; they never reach the Pi runtime stores. The result is that `/gentle:profiles` sees only keys that actually exist as installed Pi agents (`gentle-ai-explore`, `kairos`, ...) plus the reserved `orchestrator` key, so applying a profile through the UI is safe.
+- `lib/sdd-preflight.ts` → `SHIPPED_SDD_AGENT_NAMES` and `ASSET_OWNER_BY_KEY`
+- `assets/agents/*.md` → the actual managed agent definitions
+- `lib/agent-profiles.ts` → arbitrary agent-name keys plus reserved `orchestrator`
 
-`apply-active-profile.mjs` uses one deterministic table (`ROLE_TRANSLATION`) and performs the translation in memory; it never rewrites `profiles/profiles.json`:
+The profile uses these official names directly. SDD agents are not aliases for generic workers:
 
-| Source phase key | Pi agent | Why |
-| --- | --- | --- |
-| `sdd-explore` | `gentle-ai-explore` | Read-only exploration/mapping is Pi's scout role. |
-| `sdd-apply` | `gentle-ai-worker` | Bounded scoped implementation is Pi's writer role. |
-| `sdd-verify` | `gentle-ai-verify` | Command-running verification is Pi's verifier role. |
-| `sdd-verify` | `jd-judge-a`, `jd-judge-b` | Judgment-Day judges review the same contract the verifier checks, so they share its model. |
-| `sdd-verify` | `review-risk`, `review-resilience`, `review-readability`, `review-reliability` | Review lenses are verification-shaped work; one model choice covers them. |
-| `sdd-remediate`, else `sdd-apply` | `jd-fix-agent` | Fixes are writer-shaped. Prefer the dedicated remediate phase; fall back to `sdd-apply` when a profile has none. |
-| `orchestrator` | `kairos` | `kairos` is the dedicated coordinator agent, so it receives the profile's orchestrator model (and thinking level). |
+| Official agent group | Names |
+| --- | --- |
+| SDD phases | `sdd-init`, `sdd-onboard`, `sdd-explore`, `sdd-research`, `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-status`, `sdd-apply`, `sdd-verify`, `sdd-archive`, `sdd-remediate` |
+| Delegation | `gentle-ai-explore`, `gentle-ai-verify`, `gentle-ai-worker` |
+| Judgment Day | `jd-fix-agent`, `jd-judge-a`, `jd-judge-b` |
+| Review lenses | `review-readability`, `review-reliability`, `review-resilience`, `review-risk` |
+| Reserved coordinator | `orchestrator` |
 
-Rules that table follows:
-
-- Phase keys with no Pi counterpart (`sdd-init`, `sdd-onboard`, `sdd-research`, `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-status`, `sdd-archive`) are **never** materialized into Pi runtime files. They stay OpenCode-side in the repo's `profiles/profiles.json`; the runtime copies (`~/.pi/gentle-ai/profiles.json` and `~/.pi/gentle-ai/models.json`) contain only translated Pi-native keys.
-- Each Pi agent appears at most once; sources are tried in the listed order and the first present one wins.
-- Model and thinking semantics are unchanged: `model` → `model_profiles[agent].model` and `model:` frontmatter; `thinking` → `model_profiles[agent].effort` and `thinking:` frontmatter.
-- If a mapped source is missing from the active profile, the materializer fails with one line per unmapped agent naming the sources it tried, instead of silently dropping routing.
+`apply-active-profile.mjs` validates this official inventory and writes keys verbatim. It does not invent a phase-to-agent translation.
 
 ## Profiles
 
 Two profiles live in `profiles/profiles.json`. Only one is `active` at a time.
 
-### `sdd-opencode` (default active)
+### `sdd-opencode`
 
 Mixed providers. OpenAI Codex for orchestration and heavy phases, plus `opencode-go` and `opencode` free tiers where useful.
 
@@ -110,10 +105,10 @@ scripts/sync-pi-gentle
 The script:
 
 1. Verifies `pi`, `gentle-ai`, and `node` are available.
-2. Runs `gentle-ai sync --agent pi` unless `--no-gentle-sync` is passed.
+2. Runs `gentle-ai sync --agent pi --sdd-mode multi` unless `--no-gentle-sync` is passed.
 3. Backs up existing target files.
 4. Copies `profiles.json` and `kairos.md` into Pi.
-5. Runs `apply-active-profile.mjs`, which translates the active profile's phase roles into Pi agent routing.
+5. Runs `apply-active-profile.mjs`, which validates and materializes the active profile using official Pi agent names.
 6. Re-validates everything.
 
 To refresh the vendored Kairos agent from OpenCode first:
@@ -131,12 +126,12 @@ scripts/apply-active-profile.mjs --dry-run
 scripts/apply-active-profile.mjs --print-roles
 ```
 
-`apply-active-profile.mjs --dry-run` prints the exact targets it would rewrite (including every mapped agent frontmatter) without touching them. `--print-roles` dumps the resolved phase-key → Pi-agent routing as JSON; it performs no writes and is what `verify-models.mjs` consumes, so the mapping has exactly one source of truth.
+`apply-active-profile.mjs --dry-run` prints the exact targets it would rewrite without touching them. `--print-roles` dumps the active profile using the official Pi keys; it performs no writes and is what `verify-models.mjs` consumes.
 
 `scripts/verify-pi-gentle` checks two layers:
 
-1. **Contract (always fatal).** Every model id in every profile resolves against `~/.pi/agent/models-store.json` (OpenCode phase validation stays intact), the role translation yields a complete routing for the active profile, every mapped agent resolves a model, no target is an unmapped phase key, and no duplicates.
-2. **Machine state (advisory by default).** Materialized `~/.pi/gentle-ai/profiles.json` and `~/.pi/gentle-ai/models.json` are checked for Pi-native keys only (`orchestrator` plus the mapped Pi agents) and complete profiles. `subagents.json` keys and `~/.pi/agent/agents/*.md` frontmatter are compared against installed agent definitions and the resolved routing. Warnings only, so `sync-pi-gentle` can verify *before* it has applied anything on a fresh machine. Legacy `sdd-*` keys in any runtime store show up as drift that the next apply removes.
+1. **Contract (always fatal).** Every model id in every profile resolves against `~/.pi/agent/models-store.json`, and every profile key belongs to the official Gentle Pi inventory.
+2. **Machine state (advisory by default).** Materialized `~/.pi/gentle-ai/profiles.json`, `~/.pi/gentle-ai/models.json`, `subagents.json`, and installed agent assets are compared against the official names. Warnings only, so `sync-pi-gentle` can verify before a fresh `/gentle:install-sdd`.
 
 After applying, enforce layer 2:
 
@@ -145,7 +140,7 @@ scripts/apply-active-profile.mjs
 scripts/verify-pi-gentle --strict-materialized
 ```
 
-`--strict-materialized` turns every machine-state warning into a failure: mapped agent not installed, frontmatter model mismatch, model_profiles missing a mapped agent, or an unknown `model_profiles` key with no installed agent (that one is always fatal).
+`--strict-materialized` turns every machine-state warning into a failure, including official SDD assets that have not yet been installed.
 
 If anything fails, paste the full output into the agent. The output is designed to be diagnostic: missing command, invalid JSON, missing model, missing target file, unmapped source, etc.
 

@@ -36,6 +36,39 @@
       },
       "sdd-verify": {
         "model": "openai-codex/gpt-5.5"
+      },
+      "gentle-ai-explore": {
+        "model": "opencode-go/glm-5.2"
+      },
+      "gentle-ai-verify": {
+        "model": "openai-codex/gpt-5.5"
+      },
+      "gentle-ai-worker": {
+        "model": "openai-codex/gpt-5.3-codex-spark"
+      },
+      "jd-fix-agent": {
+        "model": "openai-codex/gpt-5.3-codex-spark"
+      },
+      "jd-judge-a": {
+        "model": "openai-codex/gpt-5.5"
+      },
+      "jd-judge-b": {
+        "model": "openai-codex/gpt-5.5"
+      },
+      "kairos": {
+        "model": "openai-codex/gpt-5.5"
+      },
+      "review-readability": {
+        "model": "openai-codex/gpt-5.5"
+      },
+      "review-reliability": {
+        "model": "openai-codex/gpt-5.5"
+      },
+      "review-resilience": {
+        "model": "openai-codex/gpt-5.5"
+      },
+      "review-risk": {
+        "model": "openai-codex/gpt-5.5"
       }
     },
     "sdd-opencode-go": {
@@ -87,6 +120,48 @@
       },
       "sdd-archive": {
         "model": "opencode-go/deepseek-v4-flash"
+      },
+      "gentle-ai-explore": {
+        "model": "opencode-go/glm-5.3",
+        "thinking": "high"
+      },
+      "gentle-ai-verify": {
+        "model": "opencode-go/glm-5.3-flash",
+        "thinking": "high"
+      },
+      "gentle-ai-worker": {
+        "model": "opencode-go/kimi-k2.7-code"
+      },
+      "jd-fix-agent": {
+        "model": "opencode-go/glm-5.3-flash"
+      },
+      "jd-judge-a": {
+        "model": "opencode-go/glm-5.3-flash",
+        "thinking": "high"
+      },
+      "jd-judge-b": {
+        "model": "opencode-go/glm-5.3-flash",
+        "thinking": "high"
+      },
+      "kairos": {
+        "model": "opencode-go/qwen3.8-flash",
+        "thinking": "medium"
+      },
+      "review-readability": {
+        "model": "opencode-go/glm-5.3-flash",
+        "thinking": "high"
+      },
+      "review-reliability": {
+        "model": "opencode-go/glm-5.3-flash",
+        "thinking": "high"
+      },
+      "review-resilience": {
+        "model": "opencode-go/glm-5.3-flash",
+        "thinking": "high"
+      },
+      "review-risk": {
+        "model": "opencode-go/glm-5.3-flash",
+        "thinking": "high"
       }
     }
   }

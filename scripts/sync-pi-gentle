@@ -44,7 +44,7 @@ require_command gentle-ai
 "$ROOT/scripts/verify-pi-gentle"
 
 if [[ "$RUN_GENTLE_SYNC" == "1" ]]; then
-  gentle-ai sync --agent pi
+  gentle-ai sync --agent pi --sdd-mode multi
 else
   echo "skipped: gentle-ai sync --agent pi"
 fi

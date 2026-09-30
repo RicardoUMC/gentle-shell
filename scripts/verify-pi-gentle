@@ -5,6 +5,15 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PI_AGENT_HOME="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 GENTLE_PI_HOME="$HOME/.pi/gentle-ai"
 
+# Pass --strict-materialized to also fail on unapplied/stale Pi routing state.
+VERIFY_MODELS_ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --strict-materialized) VERIFY_MODELS_ARGS+=("$arg") ;;
+    *) echo "unknown flag: $arg" >&2; exit 1 ;;
+  esac
+done
+
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "missing command: $1" >&2
@@ -50,6 +59,6 @@ fi
 
 echo "ok agent: $ROOT/profiles/agents/kairos.md"
 
-node "$ROOT/scripts/verify-models.mjs" "$ROOT" "$PI_AGENT_HOME"
+node "$ROOT/scripts/verify-models.mjs" "$ROOT" "$PI_AGENT_HOME" "${VERIFY_MODELS_ARGS[@]+"${VERIFY_MODELS_ARGS[@]}"}"
 
 echo "ok: Gentle Pi overlays are valid"

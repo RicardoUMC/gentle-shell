@@ -1,18 +1,31 @@
 #!/usr/bin/env node
 // Materialize the active profile from profiles/profiles.json into Pi runtime
-// files. Mirrors what `/gentle:profiles` does when applying a profile:
-//   - ~/.pi/gentle-ai/models.json  ← full profile (incl. orchestrator)
-//   - ~/.pi/agent/subagents.json   ← model_profiles (excl. orchestrator)
-//   - ~/.pi/agent/settings.json    ← defaultProvider/Model/ThinkingLevel
-//   - ~/.pi/agent/agents/<name>.md ← model/thinking frontmatter per agent
+// files. Mirrors what `/gentle:profiles` does when applying a profile, with one
+// difference: source profiles are OpenCode/SDD phase-keyed, but the Pi runtime
+// stores (~/.pi/gentle-ai/profiles.json and ~/.pi/gentle-ai/models.json) must
+// contain only Pi-native agent keys. Every source profile is therefore translated
+// before it reaches the runtime.
+//
+// Runtime writes:
+//   - ~/.pi/gentle-ai/profiles.json  ← translated profiles envelope
+//   - ~/.pi/gentle-ai/models.json    ← translated active profile
+//   - ~/.pi/agent/subagents.json     ← model_profiles keyed by Pi agent name
+//   - ~/.pi/agent/settings.json      ← defaultProvider/Model/ThinkingLevel
+//   - ~/.pi/agent/agents/<name>.md   ← model/thinking frontmatter per agent
+//
+// Source keys are OpenCode/SDD phase names (`sdd-init`, `sdd-explore`, ...).
+// They are translated into Pi agent names by ROLE_TRANSLATION before any runtime
+// write. Phase keys are never copied verbatim into Pi runtime files.
 //
 // Safe by default: run with --dry-run to see what would change without writes.
+// Run with --print-roles to dump the resolved routing as JSON without writes.
 
 import fs from "node:fs";
 import path from "node:path";
 
 const argv = process.argv.slice(2);
 const dryRun = argv.includes("--dry-run");
+const printRoles = argv.includes("--print-roles");
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 
 const gentleHome = path.join(process.env.HOME, ".pi/gentle-ai");
@@ -34,18 +47,129 @@ if (typeof doc.active !== "string") {
   console.error(`profiles.json has no "active" key`);
   process.exit(1);
 }
-const profile = doc.profiles?.[doc.active];
-if (!profile) {
-  console.error(`active profile "${doc.active}" not found`);
+if (!doc.profiles || typeof doc.profiles !== "object") {
+  console.error(`profiles.json has no "profiles" object`);
   process.exit(1);
 }
 
 const ORCH_KEY = "orchestrator";
-const entries = Object.fromEntries(
-  Object.entries(profile).filter(([name]) => name !== ORCH_KEY),
-);
-const orchestrator = profile[ORCH_KEY];
 
+// Deterministic OpenCode/SDD phase key -> installed Pi agent translation.
+// One target agent per entry; sources are tried in order and the first present
+// one wins. Keys are never copied verbatim into Pi routing.
+//
+//   sdd-explore   -> gentle-ai-explore   (read-only mapping/scout role)
+//   sdd-apply     -> gentle-ai-worker    (bounded scoped writer role)
+//   sdd-verify    -> gentle-ai-verify    (command-running verifier role)
+//   sdd-verify    -> jd-judge-a/b + review-{risk,resilience,readability,
+//                   reliability}        (Judgment-Day and review-lens roles
+//                   share the verification model)
+//   sdd-remediate -> jd-fix-agent        (falls back to sdd-apply when the
+//                   profile has no remediate phase)
+//   orchestrator  -> kairos             (dedicated coordinator agent)
+const ROLE_TRANSLATION = [
+  { agent: "gentle-ai-explore", sources: ["sdd-explore"] },
+  { agent: "gentle-ai-verify", sources: ["sdd-verify"] },
+  { agent: "gentle-ai-worker", sources: ["sdd-apply"] },
+  { agent: "jd-fix-agent", sources: ["sdd-remediate", "sdd-apply"] },
+  { agent: "jd-judge-a", sources: ["sdd-verify"] },
+  { agent: "jd-judge-b", sources: ["sdd-verify"] },
+  { agent: "kairos", sources: [ORCH_KEY] },
+  { agent: "review-readability", sources: ["sdd-verify"] },
+  { agent: "review-reliability", sources: ["sdd-verify"] },
+  { agent: "review-resilience", sources: ["sdd-verify"] },
+  { agent: "review-risk", sources: ["sdd-verify"] },
+];
+
+function fail(message) {
+  console.error(message);
+  process.exit(1);
+}
+
+function translateProfiles(sourceProfiles) {
+  const translatedProfiles = {};
+  const routingByProfile = {};
+  const errors = [];
+
+  for (const [name, source] of Object.entries(sourceProfiles)) {
+    if (!source || typeof source !== "object") {
+      errors.push(`profile "${name}": not an object`);
+      continue;
+    }
+
+    const translated = {};
+    const routing = [];
+
+    // Orchestrator stays under the reserved orchestrator key.
+    if (
+      Object.prototype.hasOwnProperty.call(source, ORCH_KEY) &&
+      source[ORCH_KEY] &&
+      typeof source[ORCH_KEY] === "object"
+    ) {
+      translated[ORCH_KEY] = source[ORCH_KEY];
+    }
+
+    for (const { agent, sources } of ROLE_TRANSLATION) {
+      if (agent.startsWith("sdd-")) {
+        fail(
+          `internal: routing target must be a Pi agent name, not a phase key: ${agent}`,
+        );
+      }
+      const sourceKey = sources.find(
+        (key) =>
+          Object.prototype.hasOwnProperty.call(source, key) &&
+          source[key] &&
+          typeof source[key] === "object",
+      );
+      if (!sourceKey) {
+        errors.push(
+          `profile "${name}": missing mapped source for "${agent}" (tried ${sources.map((s) => `"${s}"`).join(", ")})`,
+        );
+        continue;
+      }
+      translated[agent] = source[sourceKey];
+      routing.push({ agent, source: sourceKey, entry: source[sourceKey] });
+    }
+
+    translatedProfiles[name] = translated;
+    routingByProfile[name] = routing;
+  }
+
+  return { translatedProfiles, routingByProfile, errors };
+}
+
+const { translatedProfiles, routingByProfile, errors } = translateProfiles(
+  doc.profiles,
+);
+if (errors.length > 0) {
+  for (const msg of errors) console.error(msg);
+  fail(`cannot translate one or more profiles to Pi-native runtime keys`);
+}
+
+const activeProfile = doc.profiles[doc.active];
+if (!activeProfile) {
+  console.error(`active profile "${doc.active}" not found`);
+  process.exit(1);
+}
+const activeTranslated = translatedProfiles[doc.active];
+const activeRouting = routingByProfile[doc.active];
+const orchestrator = activeProfile[ORCH_KEY];
+
+if (printRoles) {
+  const out = {
+    active: doc.active,
+    routing: activeRouting.map(({ agent, source, entry }) => ({
+      agent,
+      source,
+      ...(entry.model ? { model: entry.model } : {}),
+      ...(entry.thinking ? { thinking: entry.thinking } : {}),
+    })),
+  };
+  process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
+  process.exit(0);
+}
+
+const profilesTarget = path.join(gentleHome, "profiles.json");
 const modelsTarget = path.join(gentleHome, "models.json");
 const subagentsTarget = path.join(piAgentHome, "subagents.json");
 const settingsTarget = path.join(piAgentHome, "settings.json");
@@ -69,44 +193,57 @@ function writeFileAtomic(p, text) {
   fs.renameSync(tmp, p);
 }
 
-// 1) models.json = active profile verbatim (includes orchestrator key)
-{
-  const next = `${JSON.stringify(profile, null, 2)}\n`;
-  const prev = fs.existsSync(modelsTarget) ? fs.readFileSync(modelsTarget, "utf8") : "";
-  if (prev === next) {
-    console.log(`unchanged: ${modelsTarget}`);
+function maybeWrite(p, nextText) {
+  const prev = fs.existsSync(p) ? fs.readFileSync(p, "utf8") : "";
+  if (prev === nextText) {
+    console.log(`unchanged: ${p}`);
   } else {
-    writeFileAtomic(modelsTarget, next);
-    console.log(`${dryRun ? "would write" : "wrote"}: ${modelsTarget}`);
+    writeFileAtomic(p, nextText);
+    console.log(`${dryRun ? "would write" : "wrote"}: ${p}`);
   }
 }
 
-// 2) subagents.json = preserve other keys, set model_profiles
+// 1) profiles.json = translated profiles envelope (Pi-native keys only)
+{
+  const nextEnvelope = {
+    kind: doc.kind,
+    version: doc.version,
+    active: doc.active,
+    profiles: translatedProfiles,
+  };
+  maybeWrite(profilesTarget, `${JSON.stringify(nextEnvelope, null, 2)}\n`);
+}
+
+// 2) models.json = translated active profile only (Pi-native keys only)
+{
+  maybeWrite(modelsTarget, `${JSON.stringify(activeTranslated, null, 2)}\n`);
+}
+
+// 3) subagents.json = preserve other keys, set model_profiles keyed by Pi agent
 {
   const current = readJsonIfPresent(subagentsTarget) ?? {};
   const modelProfiles = {};
-  for (const [name, entry] of Object.entries(entries)) {
+  for (const { agent, entry } of activeRouting) {
     const p = {};
     if (entry.model) p.model = entry.model;
     if (entry.thinking) p.effort = entry.thinking;
-    if (Object.keys(p).length > 0) modelProfiles[name] = p;
+    if (Object.keys(p).length === 0) {
+      console.log(`skipped (no model or thinking): ${agent}`);
+      continue;
+    }
+    modelProfiles[agent] = p;
   }
   const nextCfg = { ...current, model_profiles: modelProfiles };
-  const next = `${JSON.stringify(nextCfg, null, 2)}\n`;
-  const prev = fs.existsSync(subagentsTarget) ? fs.readFileSync(subagentsTarget, "utf8") : "";
-  if (prev === next) {
-    console.log(`unchanged: ${subagentsTarget}`);
-  } else {
-    writeFileAtomic(subagentsTarget, next);
-    console.log(`${dryRun ? "would write" : "wrote"}: ${subagentsTarget}`);
-  }
+  maybeWrite(subagentsTarget, `${JSON.stringify(nextCfg, null, 2)}\n`);
 }
 
-// 3) settings.json orchestrator keys
+// 4) settings.json orchestrator keys
 if (orchestrator?.model) {
   const ref = parseProviderModel(orchestrator.model);
   if (!ref) {
-    console.error(`orchestrator.model must be provider/model: ${orchestrator.model}`);
+    console.error(
+      `orchestrator.model must be provider/model: ${orchestrator.model}`,
+    );
     process.exit(1);
   }
   const current = readJsonIfPresent(settingsTarget);
@@ -119,24 +256,17 @@ if (orchestrator?.model) {
   nextCfg.defaultModel = ref.model;
   if (orchestrator.thinking) nextCfg.defaultThinkingLevel = orchestrator.thinking;
   else delete nextCfg.defaultThinkingLevel;
-  const next = `${JSON.stringify(nextCfg, null, 2)}\n`;
-  const prev = fs.existsSync(settingsTarget) ? fs.readFileSync(settingsTarget, "utf8") : "";
-  if (prev === next) {
-    console.log(`unchanged: ${settingsTarget}`);
-  } else {
-    writeFileAtomic(settingsTarget, next);
-    console.log(`${dryRun ? "would write" : "wrote"}: ${settingsTarget}`);
-  }
+  maybeWrite(settingsTarget, `${JSON.stringify(nextCfg, null, 2)}\n`);
 } else {
   console.log("skipped: orchestrator (no model in active profile)");
 }
 
-// 4) agent .md frontmatter routing for named agents that already exist
+// 5) agent .md frontmatter routing for mapped Pi agents that already exist
 if (fs.existsSync(agentsDir)) {
-  for (const [name, entry] of Object.entries(entries)) {
-    const file = path.join(agentsDir, `${name}.md`);
+  for (const { agent, entry } of activeRouting) {
+    const file = path.join(agentsDir, `${agent}.md`);
     if (!fs.existsSync(file)) {
-      console.log(`skipped (no agent file): ${name}`);
+      console.log(`skipped (no agent file): ${agent}`);
       continue;
     }
     const content = fs.readFileSync(file, "utf8");
@@ -145,12 +275,7 @@ if (fs.existsSync(agentsDir)) {
       console.log(`skipped (no frontmatter): ${file}`);
       continue;
     }
-    if (updated === content) {
-      console.log(`unchanged: ${file}`);
-      continue;
-    }
-    writeFileAtomic(file, updated);
-    console.log(`${dryRun ? "would write" : "wrote"}: ${file}`);
+    maybeWrite(file, updated);
   }
 }
 
@@ -177,5 +302,7 @@ function updateFrontmatter(content, entry) {
     const at = descIdx >= 0 ? descIdx + 1 : Math.min(1, kept.length);
     kept.splice(at, 0, ...insert);
   }
-  return `---\n${kept.join("\n")}${body}`;
+  const next = `---\n${kept.join("\n")}${body}`;
+  if (next === content) return content;
+  return next;
 }

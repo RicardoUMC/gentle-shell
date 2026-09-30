@@ -1,7 +1,7 @@
 {
   "kind": "gentle-pi.agent_model_profiles",
   "version": 1,
-  "active": "sdd-opencode",
+  "active": "sdd-opencode-go",
   "profiles": {
     "sdd-opencode": {
       "orchestrator": {
